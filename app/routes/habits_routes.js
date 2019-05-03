@@ -27,6 +27,22 @@ module.exports = function (app, db) {
       });
   });
 
+  app.get('/habits/:id/dates', (req, res) => {
+    const id = req.params.id;
+    const details = {
+      '_id': new ObjectID(id)
+    };
+    db
+      .collection('habits')
+      .findOne(details, (err, item) => {
+        if (err) {
+          res.send({'error': 'An error has occurred'});
+        } else {
+          res.send(item);
+        }
+      });
+  });
+
   app.post('/habits', (req, res) => {
     const habit = {
       title: req.body.title
@@ -38,6 +54,27 @@ module.exports = function (app, db) {
           res.send({'error': 'An error has occurred'});
         } else {
           res.send(result.ops[0]);
+        }
+      });
+  });
+
+
+  app.put('/habits/:id/dates', (req, res) => {
+    const id = req.params.id;
+    const details = {
+      '_id': new ObjectID(id)
+    };
+    const habit = {
+      dates: req.body.date
+    };
+    console.log(res);
+    db
+      .collection('habits')
+      .update(details, habit, (err, result) => {
+        if (err) {
+          res.send({'error': 'An error has occurred'});
+        } else {
+          res.send(habit);
         }
       });
   });
