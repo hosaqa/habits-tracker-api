@@ -1,117 +1,84 @@
-// note_routes.js
-var ObjectID = require('mongodb').ObjectID;
-module.exports = function (app, db) {
+const express = require("express");
+const router = express.Router();
+const ObjectID = require("mongodb").ObjectID;
+const Habit = require("../models/Habit");
 
-  app.get('/habits', (req, res) => {
-    db
-      .collection('habits')
-      .find()
-      .toArray((err, data) => {
-        res.send(data);
-      });
+router.get("/habits", (req, res) => {
+  Habit.collection.find().toArray((err, data) => {
+    if (err) {
+      res.send({ error: "An error has occurred" });
+    } else {
+      res.send(data);
+    }
   });
+});
 
-  app.get('/habits/:id', (req, res) => {
-    const id = req.params.id;
-    const details = {
-      '_id': new ObjectID(id)
-    };
-    db
-      .collection('habits')
-      .findOne(details, (err, item) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send(item);
-        }
-      });
+router.get("/habits/:id", (req, res) => {
+  const id = req.params.id;
+  const details = {
+    _id: new ObjectID(id)
+  };
+
+  Habit.collection.findOne(details, (err, item) => {
+    if (err) {
+      res.send({ error: "An error has occurred" });
+    } else {
+      res.send(item);
+    }
   });
+});
 
-  app.get('/habits/:id/dates', (req, res) => {
-    const id = req.params.id;
-    const details = {
-      '_id': new ObjectID(id)
+router.post("/habits", async (req, res) => {
+  try {
+    const habit = new Habit(req.body);
+
+    await habit.save();
+
+    res.status(201).send({ habit });
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+
+router.put("/habits/:id", async (req, res) => {
+  const newDates = req.body.dates.map(dateItem =>
+    new Date(dateItem).toString()
+  );
+
+  const habit = await Habit.findOne({ _id: req.params.id });
+
+  if (habit.dates.length) {
+    habit.dates.forEach(dateItem => {
+      const stringified = dateItem.toString();
+
+      if (newDates.includes(stringified)) {
+        newDates.splice(newDates.indexOf(stringified), 1);
+      } else {
+        newDates.push(stringified);
+      }
+    });
+
+    habit.dates = newDates;
+  } else {
+    habit.dates = newDates;
+  }
+
+  await habit.save();
+
+  res.status(200).send(habit);
+});
+
+router.delete("/habits/:id", async (req, res) => {
+  Habit.findByIdAndRemove(req.params.id, (err, habit) => {
+    if (err) return res.status(500).send(err);
+
+    const response = {
+      message: "Habit successfully deleted",
+      id: habit._id
     };
-    db
-      .collection('habits')
-      .findOne(details, (err, item) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send(item);
-        }
-      });
+
+    return res.status(200).send(response);
   });
+});
 
-  app.post('/habits', (req, res) => {
-    const habit = {
-      title: req.body.title
-    };
-    db
-      .collection('habits')
-      .insert(habit, (err, result) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send(result.ops[0]);
-        }
-      });
-  });
-
-
-  app.put('/habits/:id/dates', (req, res) => {
-    const id = req.params.id;
-    const details = {
-      '_id': new ObjectID(id)
-    };
-    const habit = {
-      dates: req.body.date
-    };
-    console.log(res);
-    db
-      .collection('habits')
-      .update(details, habit, (err, result) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send(habit);
-        }
-      });
-  });
-
-  app.delete('/habits/:id', (req, res) => {
-    const id = req.params.id;
-    const details = {
-      '_id': new ObjectID(id)
-    };
-    db
-      .collection('habits')
-      .remove(details, (err, item) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send('Habit ' + id + ' deleted!');
-        }
-      });
-  });
-
-  app.put('/habits/:id', (req, res) => {
-    const id = req.params.id;
-    const details = {
-      '_id': new ObjectID(id)
-    };
-    const habit = {
-      title: req.body.title
-    };
-    db
-      .collection('habits')
-      .update(details, habit, (err, result) => {
-        if (err) {
-          res.send({'error': 'An error has occurred'});
-        } else {
-          res.send(habit);
-        }
-      });
-  });
-
-};
+module.exports = router;
